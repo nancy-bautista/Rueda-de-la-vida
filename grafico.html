@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Rueda de la Vida - Gráfico interactivo</title>
+    <!-- html2canvas para capturar la pantalla -->
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none; /* evita selección molesta al hacer clic en sliders */
+        }
+
+        body {
+    background: linear-gradient(135deg, #FFF6F6, #F8F4FF, #EEF9FF);
+    font-family: 'DM Sans', sans-serif;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        /* contenedor principal tipo dashboard */
+        .dashboard {
+            max-width: 1300px;
+            width: 100%;
+        background: rgba(255,255,255,0.65);
+    backdrop-filter: blur(14px);
+            border-radius: 3rem;
+            padding: 1.5rem;
+        }
+
+        /* grid: gráfico a la izquierda, controles a la derecha */
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2rem;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        /* zona del gráfico (papiro con sombra) */
+        .chart-area {
+            flex: 2;
+            min-width: 320px;
+            background: white;
+            border-radius: 2rem;
+            padding: 1rem;
+            transition: all 0.2s;
+        }
+
+        .canvas-wrapper {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        canvas {
+            display: block;
+            margin: 0 auto;
+            width: 100%;
+            height: auto;
+            max-width: 480px;
+            background: #FFFDF7;
+            transition: 0.2s;
+        }
+
+        .leyenda-titulo {
+            text-align: center;
+            font-weight: bold;
+            margin-top: 1rem;
+            color: #2c3e66;
+            font-size: 1.3rem;
+        }
+
+        /* panel de controles (sliders y botones) */
+        .controls-panel {
+            flex: 1.3;
+            min-width: 280px;
+    background: rgba(255,255,255,0.75);
+            border-radius: 2rem;
+            padding: 1.2rem 1.5rem;
+            backdrop-filter: blur(4px);
+        }
+
+        .controls-panel h2,
+.leyenda-titulo {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 700;
+}
+
+        .controls-panel h2 {
+            margin-top: 0;
+            text-align: center;
+            font-size: 1.7rem;
+            color: #1e2f4e;
+            border-bottom: 3px solid #e3c1f3;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .slider-group {
+            margin-bottom: 0.9rem;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .slider-group label {
+            font-weight: 700;
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            letter-spacing: 0.3px;
+            color: #2c3e50;
+        }
+
+        .label-name {
+            background: #ecf0f1;
+            padding: 0.2rem 0.6rem;
+            border-radius: 40px;
+        }
+
+        .porcentaje-valor {
+            background: #2c3e66;
+            color: white;
+            padding: 0.2rem 0.6rem;
+            border-radius: 40px;
+            font-family: monospace;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            -webkit-appearance: none;
+            background: #d0d7de;
+            border-radius: 5px;
+            outline: none;
+        }
+
+        input[type="range"]:focus {
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #e3c1f3;
+            cursor: pointer;
+            border: none;
+        }
+
+        .acciones {
+            display: flex;
+            gap: 15px;
+            margin-top: 25px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        button {
+ background: #B8C0FF;
+    color: #3A405A;            border: none;
+            font-weight: bold;
+            padding: 12px 18px;
+            border-radius: 60px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        button i {
+            font-style: normal;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        button:hover {
+    background: #FFD6E0;
+            transform: scale(0.97);
+        }
+
+        .reset-btn {
+    background: #D8D8D8;
+        }
+
+        .mensaje {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.85rem;
+            background: #edf2f7;
+            border-radius: 50px;
+            padding: 8px;
+            color: #1f3a5f;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 1.5rem;
+            font-size: 0.7rem;
+            color: #334e68;
+        }
+
+        @media (max-width: 780px) {
+            .dashboard {
+                padding: 0.8rem;
+            }
+            .controls-panel {
+                padding: 1rem;
+            }
+            .slider-group label {
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="dashboard">
+    <div class="container">
+        <!-- área del gráfico circular -->
+        <div class="chart-area" id="chartAreaToCapture">
+            <div class="canvas-wrapper">
+                <canvas id="ruedaCanvas" width="500" height="500" style="width:100%; height:auto; max-width:500px; aspect-ratio:1/1"></canvas>
+                <div class="leyenda-titulo">✨ MI RUEDA DE LA VIDA ✨</div>
+                <div style="font-size: 0.75rem; text-align:center; margin-top: 6px;">Cada sector = porcentaje actual</div>
+            </div>
+        </div>
+
+        <!-- controles deslizantes para cada dimensión -->
+        <div class="controls-panel">
+            <h2>EQUILIBRIO PERSONAL</h2>
+            <div id="slidersContainer"></div>
+            <div class="acciones">
+                <button id="capturarBtn">CAPTURAR PANTALLA</button>
+                <button id="resetBtn" class="reset-btn"> RESTABLECER</button>
+            </div>
+            <div class="mensaje" id="mensajeFeedback">
+                 Ajusta cada porcentaje. Se guarda automáticamente en el almacenamiento local.
+            </div>
+        </div>
+    </div>
+    <footer>Rueda de la vida - Cada sector representa tu percepción actual. Arrastra sliders.</footer>
+</div>
+
+<script>
+    // Definir los 8 ejes en el orden exacto del gráfico (en sentido horario empezando desde arriba)
+    // De acuerdo a la imagen: AMIGOS, SALUD, OCIO, DINERO, DESARROLLO PERSONAL, AMOR, PROFESION, FAMILIA.
+    const CATEGORIAS = [
+        "AMIGOS", "SALUD", "OCIO", "DINERO",
+        "DESARROLLO PERSONAL", "AMOR", "PROFESION", "FAMILIA"
+    ];
+
+    // Colores vibrantes pero armónicos para cada sector (relleno)
+const COLORES = [
+    "#F8B4B4", // rosa pastel
+    "#F9C89B", // durazno
+    "#FAE3A1", // amarillo crema
+    "#C8E6B9", // verde suave
+    "#AEE6D8", // menta pastel
+    "#B8E0E8", // celeste
+    "#C7CEEA", // lavanda azul
+    "#E2C2F3"  // lila pastel
+];
+
+    // Estado de porcentajes (0 a 100)
+    let porcentajes = new Array(8).fill(50); // por defecto 50%
+
+    // Referencias DOM
+    const canvas = document.getElementById("ruedaCanvas");
+    const ctx = canvas.getContext("2d");
+    const slidersContainer = document.getElementById("slidersContainer");
+    const guardarBtn = document.getElementById("guardarBtn");
+    const capturarBtn = document.getElementById("capturarBtn");
+    const resetBtn = document.getElementById("resetBtn");
+    const mensajeDiv = document.getElementById("mensajeFeedback");
+
+    // ---- funciones de dibujo del gráfico de pastel (todos con mismo espacio angular)
+    function dibujarRueda() {
+        const w = canvas.width;
+        const h = canvas.height;
+        const centerX = w / 2;
+        const centerY = h / 2;
+        const radius = Math.min(w, h) * 0.42; // margen para etiquetas y respiro
+        ctx.clearRect(0, 0, w, h);
+        
+        // fondo suave (blanco crema)
+        ctx.fillStyle = "#FEF9E8";
+        ctx.fillRect(0, 0, w, h);
+        
+        // dibujar circulo de fondo sutil
+        ctx.save();
+        
+        // ángulo inicial: -90° (para que el primer sector (Amigos) empiece arriba)
+        let startAngle = -Math.PI / 2;
+        const totalSectores = CATEGORIAS.length;
+        const angleStep = (Math.PI * 2) / totalSectores;
+        
+        for (let i = 0; i < totalSectores; i++) {
+            const porcentaje = porcentajes[i];
+            // el ángulo de cada sector fijo (mismo espacio angular) pero el relleno se pinta con un "anillo" tipo donut? No, se quiere gráfico de pastel donde cada fracción tiene su mismo espacio, pero relleno con color y además se puede representar nivel mediante un sub-ángulo? 
+            // La interpretación correcta: "todos tienen su mismo espacio" significa que cada categoría ocupa el mismo ángulo en el círculo (45°), pero el relleno de ese sector se pinta con un porcentaje de saturación? No, lo que pide el usuario: "en el relleno en el color llenar cada fracción de pie con un porcentaje de lo que creo que estoy en ese momento".
+            // Es decir, cada sector (wedge) tiene fijo el mismo ángulo, pero dentro de ese sector se pinta un arco concéntrico? Para que se vea como un gráfico de "pétalos" o "medidor".
+            // Pero la forma clásica "rueda de la vida" muestra cada área con un nivel desde el centro hacia afuera, o bien un gráfico de radar. Sin embargo la solicitud menciona "fracción de pie" como relleno de cada porción con un porcentaje. 
+            // Mejor solución: Representar cada sector fijo (mismo ángulo) y dentro, desde el centro se dibuja una región radial que cubre el porcentaje del radio? 
+            // Para que sea más visual y coherente con sliders: Haremos un gráfico tipo "pastel radial" donde cada sector tiene su ángulo fijo, pero el radio del sector varía en función del porcentaje.
+            // Esto es un "gráfico de rosa" o "polar area chart" donde el área (radio) depende del valor, pero cada sector ocupa mismo ángulo. Perfecto para mostrar niveles.
+            // Así: ángulo fijo = 2pi/8, pero la distancia desde el centro hasta el borde exterior se escala según porcentaje/100 * radio_max.
+            // Esto cumple "cada fracción de pie con un porcentaje" y se ve muy claro.
+            const angle = startAngle + i * angleStep;
+            const nextAngle = angle + angleStep;
+            
+            // radio interno siempre 0, radio externo dinámico según porcentaje
+            const maxRadius = radius;
+            const currentRadius = maxRadius * (porcentajes[i] / 100);
+            
+            // dibujar el sector con relleno de color
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            // arco exterior (hasta el radio actual)
+            ctx.arc(centerX, centerY, currentRadius, angle, nextAngle);
+            ctx.closePath();
+            ctx.fillStyle = COLORES[i];
+            ctx.fill();
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 1.8;
+            ctx.stroke();
+            
+            // dibujar borde gris sutil del anillo completo (opcional mostrar referencia del 100%)
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.arc(centerX, centerY, maxRadius, angle, nextAngle);
+            ctx.closePath();
+            ctx.strokeStyle = "#c0cfdf";
+            ctx.lineWidth = 1.2;
+            ctx.stroke();
+            
+            // Dibujar etiquetas (texto exterior)
+            const midAngle = angle + angleStep / 2;
+            const labelRadius = maxRadius + 22;
+            const xLabel = centerX + Math.cos(midAngle) * labelRadius;
+            const yLabel = centerY + Math.sin(midAngle) * labelRadius;
+            ctx.font = "bold 14px 'Segoe UI'";
+            ctx.fillStyle = "#1e2f3a";
+            ctx.shadowBlur = 0;
+            ctx.shadowColor = "transparent";
+            // Ajuste para mejor legibilidad
+            ctx.fillText(CATEGORIAS[i], xLabel - 15, yLabel - 5);
+            // mostrar porcentaje pequeño dentro del sector o cerca
+            ctx.font = "11px 'Segoe UI'";
+            ctx.fillStyle = "#1e2f3a";
+            const innerX = centerX + Math.cos(midAngle) * (currentRadius * 0.65);
+            const innerY = centerY + Math.sin(midAngle) * (currentRadius * 0.65);
+            ctx.fillStyle = "#ffffff";
+            ctx.shadowBlur = 0;
+            ctx.fillText(Math.round(porcentajes[i]) + "%", innerX - 8, innerY + 4);
+            ctx.fillStyle = "#000000cc";
+            ctx.fillText(Math.round(porcentajes[i]) + "%", innerX - 8, innerY + 4);
+        }
+        
+        // círculo central y detalles
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius * 0.12, 0, 2 * Math.PI);
+        ctx.fillStyle = "#FFD966";
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius * 0.08, 0, 2 * Math.PI);
+        ctx.fillStyle = "#F4A261";
+        ctx.fill();
+        
+        ctx.restore();
+        // agregar texto central pequeño
+        ctx.font = "bold 18px 'Segoe UI'";
+        ctx.fillStyle = "#2b3b4c";
+        ctx.shadowBlur = 0;
+        ctx.fillText("⚡", centerX-6, centerY+7);
+    }
+    
+    // ---- generar sliders dinámicamente 
+    function crearSliders() {
+        slidersContainer.innerHTML = "";
+        CATEGORIAS.forEach((cat, idx) => {
+            const grupo = document.createElement("div");
+            grupo.className = "slider-group";
+            
+            const labelDiv = document.createElement("label");
+            const spanName = document.createElement("span");
+            spanName.className = "label-name";
+            spanName.innerText = cat;
+            const spanVal = document.createElement("span");
+            spanVal.className = "porcentaje-valor";
+            spanVal.id = `valor_${idx}`;
+            spanVal.innerText = `${Math.round(porcentajes[idx])}%`;
+            labelDiv.appendChild(spanName);
+            labelDiv.appendChild(spanVal);
+            
+            const input = document.createElement("input");
+            input.type = "range";
+            input.min = 0;
+            input.max = 100;
+            input.step = 1;
+            input.value = porcentajes[idx];
+            input.id = `slider_${idx}`;
+            
+            // evento actualizar
+            input.addEventListener("input", (e) => {
+                const newVal = parseInt(e.target.value, 10);
+                porcentajes[idx] = newVal;
+                spanVal.innerText = `${newVal}%`;
+                dibujarRueda();
+                // Auto-guardar en localStorage cada vez que se mueve un slider (opcional, pero buena práctica)
+                guardarEnLocalStorageSinMensaje();
+                mostrarMensajeTemporal("✏️ Porcentaje actualizado", 800);
+            });
+            
+            grupo.appendChild(labelDiv);
+            grupo.appendChild(input);
+            slidersContainer.appendChild(grupo);
+        });
+    }
+    
+    // mostrar mensaje breve
+    let timeoutMsg;
+    function mostrarMensajeTemporal(texto, duracion = 1500) {
+        if (timeoutMsg) clearTimeout(timeoutMsg);
+        mensajeDiv.innerHTML = `🔔 ${texto}`;
+        timeoutMsg = setTimeout(() => {
+            mensajeDiv.innerHTML = "💡 Ajusta cada porcentaje. Se guarda automáticamente en el almacenamiento local.";
+        }, duracion);
+    }
+    
+    // guardar en localStorage con notificación explícita
+    function guardarEnLocalStorage() {
+        const data = {
+            porcentajes: porcentajes,
+            fechaGuardado: new Date().toISOString()
+        };
+        localStorage.setItem("ruedaVidaData", JSON.stringify(data));
+        mostrarMensajeTemporal("✅ Datos guardados en LocalStorage correctamente", 1500);
+    }
+    
+    // guardado silencioso para auto-guardar en cada slider
+    function guardarEnLocalStorageSinMensaje() {
+        const data = {
+            porcentajes: porcentajes,
+            fechaGuardado: new Date().toISOString()
+        };
+        localStorage.setItem("ruedaVidaData", JSON.stringify(data));
+    }
+    
+    // cargar desde localStorage
+    function cargarDesdeLocalStorage() {
+        const guardado = localStorage.getItem("ruedaVidaData");
+        if (guardado) {
+            try {
+                const data = JSON.parse(guardado);
+                if (data.porcentajes && data.porcentajes.length === CATEGORIAS.length) {
+                    porcentajes = data.porcentajes.map(v => Math.min(100, Math.max(0, v)));
+                    // actualizar inputs y labels
+                    for (let i = 0; i < CATEGORIAS.length; i++) {
+                        const slider = document.getElementById(`slider_${i}`);
+                        const spanVal = document.getElementById(`valor_${i}`);
+                        if (slider) slider.value = porcentajes[i];
+                        if (spanVal) spanVal.innerText = `${Math.round(porcentajes[i])}%`;
+                    }
+                    dibujarRueda();
+                    mostrarMensajeTemporal("📀 Datos cargados desde LocalStorage", 1200);
+                } else {
+                    console.warn("Estructura incorrecta, usando valores por defecto");
+                }
+            } catch(e) { console.warn("error parse", e); }
+        } else {
+            // por defecto ya tenemos 50% pero se puede dejar valores creativos de ejemplo
+            // mantenemos 50 como neutral pero para demostración pondremos algunos valores variados:
+            if(porcentajes.every(v=> v===50)) {
+                // Valores de ejemplo atractivos (sin sobreescribir si ya había otro)
+                const ejemplo = [78, 65, 45, 70, 55, 82, 60, 88];
+                for(let i=0;i<ejemplo.length;i++) porcentajes[i] = ejemplo[i];
+                // actualizar sliders después de crear
+                for(let i=0;i<CATEGORIAS.length;i++) {
+                    const slider = document.getElementById(`slider_${i}`);
+                    if(slider) slider.value = porcentajes[i];
+                    const span = document.getElementById(`valor_${i}`);
+                    if(span) span.innerText = `${porcentajes[i]}%`;
+                }
+                dibujarRueda();
+                guardarEnLocalStorageSinMensaje();
+                mostrarMensajeTemporal("🎨 Valores de demostración cargados (puedes modificarlos)", 1800);
+            }
+        }
+    }
+    
+    // reset a 50% (equilibrio medio)
+    function resetearValores() {
+        for (let i = 0; i < CATEGORIAS.length; i++) {
+            porcentajes[i] = 50;
+            const slider = document.getElementById(`slider_${i}`);
+            if (slider) slider.value = 50;
+            const spanVal = document.getElementById(`valor_${i}`);
+            if (spanVal) spanVal.innerText = "50%";
+        }
+        dibujarRueda();
+        guardarEnLocalStorageSinMensaje();
+        mostrarMensajeTemporal("🔄 Todos los valores restablecidos al 50%", 1200);
+    }
+    
+    // captura de pantalla del área del gráfico + leyenda y entorno (área designada chartAreaToCapture)
+    async function capturarPantalla() {
+        const element = document.getElementById("chartAreaToCapture");
+        if (!element) return;
+        // Pequeño feedback visual: deshabilitar botón momentáneamente
+        capturarBtn.disabled = true;
+        capturarBtn.innerText = "📸 Capturando...";
+        try {
+            // Usamos html2canvas con mejor resolución y fondo
+            const canvasCaptura = await html2canvas(element, {
+                scale: 2.5,
+                backgroundColor: "#FEF9E8",
+                logging: false,
+                useCORS: false,
+                allowTaint: false
+            });
+            // Crear enlace de descarga
+            const link = document.createElement("a");
+            const fecha = new Date();
+            const nombreArchivo = `rueda_vida_${fecha.getFullYear()}-${fecha.getMonth()+1}-${fecha.getDate()}_${fecha.getHours()}-${fecha.getMinutes()}.png`;
+            link.download = nombreArchivo;
+            link.href = canvasCaptura.toDataURL("image/png");
+            link.click();
+            mostrarMensajeTemporal("📸 Captura de pantalla guardada como imagen PNG", 2000);
+        } catch (error) {
+            console.error("Error en captura:", error);
+            mostrarMensajeTemporal("⚠️ Error al capturar, intenta de nuevo", 2000);
+        } finally {
+            capturarBtn.disabled = false;
+            capturarBtn.innerText = "📸 CAPTURAR PANTALLA";
+        }
+    }
+    
+    // Manejar evento de redimensionamiento para mantener el canvas nítido? 
+    // El canvas tiene tamaño fijo 500x500 pero CSS lo escala bien. Al dibujar usamos coordenadas fijas.
+    // Para evitar pérdida de calidad, al cambiar tamaño de ventana no necesitamos redibujar pero si hubiera 
+    // problemas de resolución lo dejamos estable. Asignamos un resizeListener: 
+    function handleResize() {
+        // mantener dibujo igual pero canvas no pierde proporciones. Solo redibujamos por si acaso.
+        dibujarRueda();
+    }
+    
+    // Inicialización completa
+    function init() {
+        crearSliders();
+        // Configurar canvas dimensiones reales
+        canvas.width = 500;
+        canvas.height = 500;
+        // Intentar cargar datos previos desde localStorage
+        cargarDesdeLocalStorage(); // esto dibuja y ajusta sliders después de creados
+        // Forzar redibujado luego de carga asegurada
+        dibujarRueda();
+        // eventos botones
+        guardarBtn.addEventListener("click", () => {
+            guardarEnLocalStorage();
+        });
+        capturarBtn.addEventListener("click", capturarPantalla);
+        resetBtn.addEventListener("click", resetearValores);
+        window.addEventListener("resize", () => {
+            setTimeout(dibujarRueda, 60);
+        });
+        // Verificar si no se cargó nada y sliders no actualizados (garantía)
+        setTimeout(() => {
+            for(let i=0;i<CATEGORIAS.length;i++) {
+                const span = document.getElementById(`valor_${i}`);
+                if(span && parseInt(span.innerText) !== porcentajes[i]) {
+                    span.innerText = `${Math.round(porcentajes[i])}%`;
+                    const slid = document.getElementById(`slider_${i}`);
+                    if(slid && slid.value != porcentajes[i]) slid.value = porcentajes[i];
+                }
+            }
+            dibujarRueda();
+        }, 30);
+    }
+    
+    init();
+</script>
+</body>
+</html>
