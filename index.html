@@ -255,10 +255,16 @@
 <script>
     // Definir los 8 ejes en el orden exacto del gráfico (en sentido horario empezando desde arriba)
     // De acuerdo a la imagen: AMIGOS, SALUD, OCIO, DINERO, DESARROLLO PERSONAL, AMOR, PROFESION, FAMILIA.
-    const CATEGORIAS = [
-        "AMIGOS", "SALUD", "OCIO", "DINERO",
-        "DESARROLLO PERSONAL", "AMOR", "PROFESION", "FAMILIA"
-    ];
+ const CATEGORIAS = [
+    "AMIGOS",
+    "SALUD",
+    "OCIO",
+    "DINERO",
+    ["DESARROLLO", "PERSONAL"],
+    "AMOR",
+    "PROFESION",
+    "FAMILIA"
+];
 
     // Colores vibrantes pero armónicos para cada sector (relleno)
 const COLORES = [
@@ -279,7 +285,7 @@ const COLORES = [
     const canvas = document.getElementById("ruedaCanvas");
     const ctx = canvas.getContext("2d");
     const slidersContainer = document.getElementById("slidersContainer");
-    const guardarBtn = document.getElementById("guardarBtn");
+    // const guardarBtn = document.getElementById("guardarBtn");
     const capturarBtn = document.getElementById("capturarBtn");
     const resetBtn = document.getElementById("resetBtn");
     const mensajeDiv = document.getElementById("mensajeFeedback");
@@ -354,8 +360,17 @@ const COLORES = [
             ctx.shadowBlur = 0;
             ctx.shadowColor = "transparent";
             // Ajuste para mejor legibilidad
-            ctx.fillText(CATEGORIAS[i], xLabel - 15, yLabel - 5);
-            // mostrar porcentaje pequeño dentro del sector o cerca
+if (Array.isArray(CATEGORIAS[i])) {
+    CATEGORIAS[i].forEach((linea, index) => {
+        ctx.fillText(
+            linea,
+            xLabel - 35,
+            yLabel - 8 + (index * 16)
+        );
+    });
+} else {
+    ctx.fillText(CATEGORIAS[i], xLabel - 20, yLabel);
+}            // mostrar porcentaje pequeño dentro del sector o cerca
             ctx.font = "11px 'Segoe UI'";
             ctx.fillStyle = "#1e2f3a";
             const innerX = centerX + Math.cos(midAngle) * (currentRadius * 0.65);
@@ -567,9 +582,10 @@ const COLORES = [
         // Forzar redibujado luego de carga asegurada
         dibujarRueda();
         // eventos botones
+        /*
         guardarBtn.addEventListener("click", () => {
             guardarEnLocalStorage();
-        });
+        }); */
         capturarBtn.addEventListener("click", capturarPantalla);
         resetBtn.addEventListener("click", resetearValores);
         window.addEventListener("resize", () => {
